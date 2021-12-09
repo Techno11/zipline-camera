@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Zipline Control</title>
+    <script src="/scripts/controller.min.js"></script>
+    <script src="/scripts/controller.layouts.min.js"></script>
+    <script src="/socket.io/socket.io.min.js"></script>
+
+    <script>
+      const socket = io(`http://${location.host}`);
+      Controller.search();
+
+      // Register Socket event handlers
+      socket.on('connect', () => {
+        document.getElementById("no-socket").style.display = 'none'
+        document.getElementById("yes-socket").style.display = 'block'
+      })
+      socket.on('disconnect', () => {
+        document.getElementById("no-socket").style.display = 'block'
+        document.getElementById("yes-socket").style.display = 'none'
+      })
+
+      // Register Controller Event Handlers
+      window.addEventListener("gc.controller.found", () => {
+        document.getElementById("no-gamepad").style.display = 'none'
+        document.getElementById("yes-gamepad").style.display = 'block'
+      });
+      window.addEventListener('gc.controller.lost', () => {
+        document.getElementById("no-gamepad").style.display = 'block'
+        document.getElementById("yes-gamepad").style.display = 'none'
+      }, false);
+
+      // Analog stick is moving
+      window.addEventListener('gc.analog.hold', (event) => {
+        const stick = event.detail;
+        if (Math.abs(stick.position.x) > .2 || Math.abs(stick.position.y) > .2) {
+          switch (stick.name) {
+            case 'RIGHT_ANALOG_STICK': {
+              socket.emit('right-stick', JSON.stringify(stick.position))
+              break;
+            }
+            case 'LEFT_ANALOG_STICK': {
+              socket.emit('left-stick', JSON.stringify(stick.position))
+              break;
+            }
+          }
+        } else {
+          switch (stick.name) {
+            case 'RIGHT_ANALOG_STICK': {
+              socket.emit('right-stick', JSON.stringify({x: 0, y: 0}))
+              break;
+            }
+            case 'LEFT_ANALOG_STICK': {
+              socket.emit('left-stick', JSON.stringify({x: 0, y: 0}))
+              break;
+            }
+          }
+        }
+      });
+
+      // Analog stick returns to center
+      window.addEventListener('gc.analog.end', (event) => {
+        const stick = event.detail;
+        switch (stick.name) {
+          case 'RIGHT_ANALOG_STICK': {
+            rightZero = true;
+            socket.emit('right-stick', JSON.stringify({x: 0, y: 0}))
+            break;
+          }
+          case 'LEFT_ANALOG_STICK': {
+            leftZero = true;
+            socket.emit('left-stick', JSON.stringify({x: 0, y: 0}))
+            break;
+          }
+        }
+      });
+    </script>
+
+</head>
+<body>
+<p id="no-gamepad" style="display: block;">Please connect a gamepad and press any button</p>
+<p id="yes-gamepad" style="display: none;">Gamepad Connected!</p>
+<p id="no-socket" style="display: block;">Socket Disconnected</p>
+<p id="yes-socket" style="display: none;">Socket Connected!</p>
+<!--
+<img src="http://10.3.141.1:8888/videostream.cgi" style="max-height: 80vh; max-width: 80vw;"></img>
+-->
+</body>
+</html>
